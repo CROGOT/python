@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 import requests
 import re
 
+
+
 def save_htm_into_file(url,filename):
 	page = requests.get(url,'windows-1251')
 	f=open(filename,'w')
@@ -22,29 +24,53 @@ def kinopoisk_save_pic(url,destination):
 		print(img_name)
 
 def kinopoisk_save_info_film(url,destination):
+	# page = requests.get(url)
+	# page.encoding = 'utf-8'
 	f=open('kinopoisk_main.html')
 	text = f.read()
 	f.close()
 	soup = BeautifulSoup(text,'lxml')
-	# print(soup.title)
-	table_info = soup.find('table',{'class':'info'}).findAll('tr')
-	print(table_info[0].contents[1].text)
-	print(table_info[0].contents[3].text)
+	table_info = soup.find('table',class_='info').findAll("tr")
+	# print(table_info)
+	# print(table_info[0].contents[1].text)
+	god=re.sub('\n', '',table_info[0].contents[3].text)
+	print("Год: "+god)
 
-	print(table_info[1].contents[1].text)
-	print(table_info[1].contents[3].text)
+	# print(table_info[1].contents[1].text)
+	strana=re.sub('\n', '',table_info[1].contents[3].text)
+	print("Страна: "+strana)
 
-	print(table_info[2].contents[0].text)
-	print(table_info[2].contents[1].text)
+	# print(table_info[2].contents[0].text)
+	slogan=re.sub('\n', '',table_info[2].contents[1].text)
+	print("Слоган: "+slogan)
 
 
-	print(table_info[3].contents)
+	# print(table_info[3].contents)
+	regiser="Режиссёр:"
+	for regisers in table_info[3].contents[1].findAll('a'):
+		regiser+=' '+regisers.text+','
+	regiser=regiser[:-1]
+	print(regiser)
+
+	vozrast=str(table_info[14].contents[3].contents[1])[24:26]
+	print("Возраст: "+vozrast+" +")
 
 
-	print(table_info[3].contents[0].text)
-	print(table_info[3].contents[1].contents[0].text)
+	aktery = soup.findAll('li',{'itemprop':'actors'})
+	# print(aktery)
+	akters="Актёры:"
+	for akter in aktery:
+		akters+=" "+akter.contents[0].text+","
+	akters=akters[:-1]
+	print(akters)
 
-	# print(table_info[3].contents[1].text)
+
+	td=soup.find('tr',text = re.compile('год')).parent
+	print(td)
+
+	# print(table_info[3].contents[1].findAll('a'))
+
+	# print(table_info[3].contents[1].text)[24:26][24:26]
 	# print(table_info[3].contents[3].text)		
 	# for info in table_info:
 	# 	print(info.contents[0])
