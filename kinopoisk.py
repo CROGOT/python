@@ -3,14 +3,16 @@ import requests
 import re
 import os
 import configparser
+from datetime import datetime
 
 #######################################################
 
-SITE_URL="https://www.kinopoisk.ru/film/994634/"
+SITE_URL="https://www.kinopoisk.ru/film/1018804/"
 
 CATALOG="C:\\Users\\Егор\\Desktop\\foto\\"
 
-STEP=[1,2,3,4] 
+# STEP=[1,2,3,4] 
+STEP=[2]
 	   # 1 - спарсить сайт в файлы, 
 	   # 2 - спарсить инфу по фильму, 
 	   # 3 - парс урл картинок,
@@ -94,20 +96,17 @@ def kinopoisk_save_info_film():
 	f.close()
 	soup = BeautifulSoup(text,'lxml')
 	film['имя']=soup.find('h1',{'class':'moviename-big'}).text
+	film['описание']=re.sub('&nbsp;', ' ',soup.find('div',{'class':'film-synopsys'}).text)
+	film['описание']=re.sub(chr(0x97), '-',film['описание'])
 	table_info = soup.find('table',class_='info')
 
 	film['год']=table_info.find('td',text = re.compile('год')).findNext('td').a.text
 
-	film['страна']=[]
-	for strana in table_info.find('td',text = re.compile('страна')).findNext('td').findAll('a'):
-		film['страна'].append(strana.text)
-	# film['страна']=table_info.find('td',text = re.compile('страна')).findNext('td').a.text
-
-	film['слоган']=table_info.find('td',text = re.compile('слоган')).findNext('td').text
-
-	film['режиссер']=[]
-	for regiser in table_info.find('td',text = re.compile('режиссер')).findNext('td').findAll('a'):
-		film['режиссер'].append(regiser.text)
+	aktery = soup.find('div',{'id':'actorList'}).ul
+	film['актер']=[]
+	for akter in aktery.findAll('li'):
+		film['актер'].append(akter.contents[0].text)
+	film['актер'].pop(-1)
 
 	try:
 		film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').a.text
@@ -116,21 +115,29 @@ def kinopoisk_save_info_film():
 			film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').div.text.replace("\n", "").replace(" ", "")
 		except AttributeError:
 			film['бюджет']='-'
-		
-	film['время']=table_info.find('td',text = re.compile('время')).findNext('td').text
 
-	try:
-		film['дата']=soup.find('td',{'id':'div_rus_prem_td2'}).find('div',{'class':'prem_ical'}).get('data-ical-date')
-	except AttributeError:
-		film['дата']='-'
-	
 	film['возраст']=re.sub('"', '',str(table_info.find('td',text = re.compile('возраст')).findNext('td').contents[1])[24:26])
 
-	aktery = soup.find('div',{'id':'actorList'}).ul
-	film['актер']=[]
-	for akter in aktery.findAll('li'):
-		film['актер'].append(akter.contents[0].text)
-	film['актер'].pop(-1)
+	try: film['дата']=soup.find('td',{'id':'div_rus_prem_td2'}).find('div',{'class':'prem_ical'}).get('data-ical-date')
+	except AttributeError: film['дата']='-'
+	else: film['дата']=format_date(film['дата'])
+
+	film['время']=table_info.find('td',text = re.compile('время')).findNext('td').text
+
+	film['режиссер']=[]
+	for regiser in table_info.find('td',text = re.compile('режиссер')).findNext('td').findAll('a'):
+		film['режиссер'].append(regiser.text)
+
+	film['слоган']=table_info.find('td',text = re.compile('слоган')).findNext('td').text
+
+	film['страна']=[]
+	for strana in table_info.find('td',text = re.compile('страна')).findNext('td').findAll('a'):
+		film['страна'].append(strana.text)
+	# film['страна']=table_info.find('td',text = re.compile('страна')).findNext('td').a.text
+
+		
+
+	
 
 	film['preview_url']=soup.find('a',{'class':'popupBigImage'}).img.get('src')
 
@@ -158,6 +165,14 @@ def write_info_ini():
 def get_ini(key):
 	config.read(FILEINI)
 	return config[SETTING][key]
+
+def format_date(date_str):
+	RU_MONTH_VALUES = {'января': 1,'февраля': 2,'марта': 3,'апреля': 4,'мая': 5,'июня': 6,'июля': 7,'августа': 8,'сентября': 9,'октября': 10,'ноября': 10,'декабря': 12,}
+	for k, v in RU_MONTH_VALUES.items():
+		date_str = date_str.replace(k, str(v))
+	d = datetime.strptime(date_str+', 00:00', '%d %m %Y, %H:%M')
+	strg = f'{d:%d.%m.%Y}'
+	return strg
 
 def kinopoisk_save_urlpic():
 	if (3 not in STEP): return False
