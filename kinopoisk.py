@@ -7,12 +7,12 @@ from datetime import datetime
 
 #######################################################
 
-SITE_URL="https://www.kinopoisk.ru/film/1018804/"
+SITE_URL="https://www.kinopoisk.ru/film/279095/"
 
 CATALOG="C:\\Users\\Егор\\Desktop\\foto\\"
 
 # STEP=[1,2,3,4] 
-STEP=[2]
+STEP=[2,3]
 	   # 1 - спарсить сайт в файлы, 
 	   # 2 - спарсить инфу по фильму, 
 	   # 3 - парс урл картинок,
@@ -85,6 +85,16 @@ def save_pics_html():
 	name_catalog = config[SETTING]['name_catalog']
 	config[SETTING]['filenamepis']=filename
 	save_htm_into_file(page,name_catalog,filename)
+
+def clr_text(text):
+	specsimbols={' ':'&nbsp;','-':chr(0x97), '...':chr(0x85)}
+	for key in specsimbols:
+		# print(key)
+		# print(specsimbols[key])
+		text=re.sub(specsimbols[key], key,text)
+	return text
+def showsymbols():
+	print("…–—·{«^»}{‹^›}{„^“}{‘^’}́…•¶§|±≈≠≥≤×∙÷√∆∞|′″¹²³ⁿ●°µ‰Ω|½¼¾|€¢¥|©®™")
 	
 def kinopoisk_save_info_film():
 	if (2 not in STEP): return False
@@ -96,8 +106,8 @@ def kinopoisk_save_info_film():
 	f.close()
 	soup = BeautifulSoup(text,'lxml')
 	film['имя']=soup.find('h1',{'class':'moviename-big'}).text
-	film['описание']=re.sub('&nbsp;', ' ',soup.find('div',{'class':'film-synopsys'}).text)
-	film['описание']=re.sub(chr(0x97), '-',film['описание'])
+	film['описание']=clr_text(soup.find('div',{'class':'film-synopsys'}).text)
+	# film['описание']=re.sub(chr(0x97), '-',film['описание'])
 	table_info = soup.find('table',class_='info')
 
 	film['год']=table_info.find('td',text = re.compile('год')).findNext('td').a.text
@@ -108,13 +118,10 @@ def kinopoisk_save_info_film():
 		film['актер'].append(akter.contents[0].text)
 	film['актер'].pop(-1)
 
-	try:
-		film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').a.text
+	try: film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').a.text
 	except AttributeError:
-		try:
-			film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').div.text.replace("\n", "").replace(" ", "")
-		except AttributeError:
-			film['бюджет']='-'
+		try: film['бюджет']=table_info.find('td',text = re.compile('бюджет')).findNext('td').div.text.replace("\n", "").replace(" ", "")
+		except AttributeError: film['бюджет']='-'
 
 	film['возраст']=re.sub('"', '',str(table_info.find('td',text = re.compile('возраст')).findNext('td').contents[1])[24:26])
 
@@ -134,10 +141,6 @@ def kinopoisk_save_info_film():
 	for strana in table_info.find('td',text = re.compile('страна')).findNext('td').findAll('a'):
 		film['страна'].append(strana.text)
 	# film['страна']=table_info.find('td',text = re.compile('страна')).findNext('td').a.text
-
-		
-
-	
 
 	film['preview_url']=soup.find('a',{'class':'popupBigImage'}).img.get('src')
 
@@ -212,3 +215,4 @@ if __name__ == "__main__":
 	kinopoisk_save_pics()
 	write_ini()
 	write_info_ini()
+	# showsymbols()
